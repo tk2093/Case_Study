@@ -13,8 +13,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
 
-!wget -O casestudy1.csv 'https://drive.google.com/file/d/1s09l3nnhC0Ruy6T0Y6w04xFZ7YwwszUS/view?usp=sharing'
-
 df = pd.read_csv('casestudy.csv')
 
 df.head()
