@@ -35,6 +35,8 @@ df = pd.read_csv('loans_full_schema.csv')
 
 df.head()
 
+df.info()
+
 df1 = df.pop('interest_rate')
 df['interest_rate'] = df1
 
@@ -42,22 +44,14 @@ lst =[]
 for col in df.columns:
   if len(df[col].unique())<3:
     lst.append(col)
-lst
+print(lst)
 
 df.drop(['num_accounts_120d_past_due'], axis=1, inplace=True) #since only one value in the column
-
-plt.scatter(df.annual_income/10000,df.interest_rate)
-plt.show()
-
-plt.scatter(df.annual_income/50000,df.interest_rate)
-plt.show()
 
 zero_col = ['emp_length','debt_to_income', 'annual_income_joint','debt_to_income_joint','months_since_last_delinq','months_since_90d_late','months_since_last_credit_inquiry']
 empty_col = ['emp_title','verification_income_joint',]
 df[zero_col] = df[zero_col].fillna(0)
 df[empty_col] = df[empty_col].fillna('')
-
-df.info()
 
 num_feat = df.select_dtypes('number').columns.values
 comb_num_feat = np.array(list(combinations(num_feat, 2)))
@@ -65,20 +59,15 @@ corr_num_feat = np.array([])
 for comb in comb_num_feat:
     corr = pearsonr(df[comb[0]], df[comb[1]])[0]
     corr_num_feat = np.append(corr_num_feat, corr)
-high_corr_num = comb_num_feat[np.abs(corr_num_feat) >= 0.8]
-
+high_corr_num = comb_num_feat[np.abs(corr_num_feat) >= 0.8]                     #source: pavlo fesenko (https://www.kaggle.com/code/pavlofesenko/minimizing-risks-for-loan-investment)
 df = df.drop(np.unique(high_corr_num[:, 1]), axis=1, errors='ignore')
-
-plt.scatter(df.debt_to_income,df.interest_rate)
-plt.show()
 
 df.info()
 
 plt.figure(figsize=(20,10))
-plt.bar(df['loan_status'].unique(),df['loan_status'].value_counts())
+sns.countplot(data=df,x='loan_status',hue='term')
 plt.xlabel('Loan Status')
 plt.ylabel('Count')
-#.bar(title="Loan Status Counts", xlabel='Loan Status', ylabel='Count', width=500, height=350)
 plt.show()
 
 plt.figure(figsize=(20,10))
@@ -94,9 +83,12 @@ sns.countplot(x='grade', data=status, hue='loan_status', order=grade)
 plt.show()
 
 plt.figure(figsize=(20,10))
-
 sns.boxplot(data=df, x='grade', y='interest_rate',order=grade)
 plt.ylabel('Interest rate')
+plt.show()
+
+plt.figure(figsize=(15,7))
+sns.countplot(x='homeownership', data=df)#, hue='interest_rate')
 plt.show()
 
 plt.figure(figsize=(20,10))
@@ -104,20 +96,11 @@ sns.boxplot(data=df, x='homeownership', y='interest_rate')
 plt.ylabel('Interest rate')
 plt.show()
 
-plt.figure(figsize=(10,5))
-sns.boxplot(data=df, x='debt_to_income')
-plt.show()
-
-plt.figure(figsize=(20,10))
-plt.scatter(df.debt_to_income,df.interest_rate)
-plt.show()
-
-plt.figure(figsize=(20,10))
-
+plt.figure(figsize=(15,7))
 sns.countplot(x='term', data=df)#, hue='interest_rate')
 plt.show()
 
-plt.figure(figsize=(20,10))
+plt.figure(figsize=(15,7))
 sns.boxplot(data=df, x='term', y='interest_rate')
 plt.ylabel('Interest rate')
 plt.show()
@@ -129,19 +112,19 @@ plt.ylabel('Interest rate')
 plt.show()
 
 plt.figure(figsize=(20,10))
-sns.scatterplot(data=df, x="total_credit_lines", y="interest_rate", hue="grade", style="term")
-plt.show()
-
-plt.figure(figsize=(20,10))
 sns.scatterplot(data=df[df['annual_income']<1.0e6], x="loan_amount", y="interest_rate", hue="grade", style="term")
 plt.show()
 
 plt.figure(figsize=(20,10))
-sns.scatterplot(data=df[df['annual_income']<1.0e6], x="annual_income", y="interest_rate", hue="issue_month")#, style="issue_month")
+sns.scatterplot(data=df, x="total_credit_lines", y="interest_rate", hue="grade", style="term")
 plt.show()
 
 plt.figure(figsize=(20,10))
-sns.scatterplot(data=df[(df['annual_income']<1.0e6)], x="annual_income", y="interest_rate", hue="loan_purpose", style="term")
+sns.scatterplot(data=df[df['annual_income']<1.0e6], x="annual_income", y="interest_rate", hue="homeownership")#, style="issue_month")
+plt.show()
+
+plt.figure(figsize=(20,10))
+sns.scatterplot(data=df[(df['annual_income']<1.0e6)], x="annual_income", y="interest_rate", hue="loan_purpose", style="disbursement_method")
 plt.show()
 
 order = df.groupby('loan_purpose').agg({'interest_rate': ['mean']})['interest_rate'].sort_values(by='mean').index
@@ -151,24 +134,18 @@ plt.ylabel('Interest rate')
 plt.show()
 
 plt.figure(figsize=(20,10))
-
-sns.countplot(x='issue_month', data=df)#, hue='interest_rate')
-plt.show()
-
-plt.figure(figsize=(20,10))
 sns.scatterplot(data=df[df['annual_income']<0.6e6], x="loan_amount", y="interest_rate", hue="verified_income", style="initial_listing_status")
 plt.show()
 
-df.info()
-
 #removing outliers
 df = df[(df.annual_income<df.annual_income.mean()+3*df.annual_income.std())]
-df = df[~((df.grade =='D') & (df.interest_rate < 10))]
+df = df[~((df.grade == 'D') & (df.interest_rate < 10))]
 
 #remove outliers
 
 # df = df[(np.abs(zscore(df[df.select_dtypes('number').columns.values])) < 3).all(axis=1)]
 
+#converting object columns to numerical
 cat_col = df.select_dtypes('object').columns.values
 for col in cat_col:
   tmepdf = df[col].copy()
@@ -188,13 +165,7 @@ for comb in combs:
     corr = pearsonr(df[comb[0]], df[comb[1]])[0]
     corrs = np.append(corrs, corr)
 high_corr= combs[np.abs(corrs) >= 0.8]
-df = df.drop(np.unique(high_corr[:, 0]), axis=1, errors='ignore')
-
-df.info()
-
-plt.figure(figsize=(25,12))
-sns.heatmap(df.corr(), vmin=-1, vmax=1, center=0)
-plt.show()
+df = df.drop(np.unique(high_corr[:, 0]), axis=1, errors='ignore')               #source: pavlo fesenko (https://www.kaggle.com/code/pavlofesenko/minimizing-risks-for-loan-investment)
 
 X = df.iloc[:,:-1]
 y = df.iloc[:,-1].values
@@ -217,16 +188,19 @@ print('Mean Absolute Error: ',round(metrics.mean_absolute_error(sc.inverse_trans
 plt.figure(figsize=(20,10))
 plt.scatter(y=sc.inverse_transform(y_test),x=range(len(sc.inverse_transform(y_test))),label='Actual')
 plt.scatter(y=y_pred,x=range(len(sc.inverse_transform(y_test))),label='Predicted')
+plt.title('Predictions using Random Forest')
 plt.xlabel('Datapoint Number')
 plt.ylabel('Interest rate')
 plt.legend()
 plt.show()
 
-feat = X_train.columns
+col = X_train.columns
 imp = rf.feature_importances_
-feat_df = pd.DataFrame({'Feature': feat, 'Importance': imp})
-feat_df = feat_df.sort_values('Importance', ascending=False)[:10]
-sns.barplot(x='Importance', y='Feature', data=feat_df);
+imp_df = pd.DataFrame({'Attributes': col, 'Importance': imp})
+imp_df = imp_df.sort_values('Importance', ascending=False)[:5]
+plt.figure(figsize=(15,7))
+sns.barplot(x='Importance', y='Attributes', data=imp_df)
+plt.show()
 
 regressor = Sequential()
 regressor.add(Dense(100, input_dim=41, kernel_initializer='normal', activation='relu'))
@@ -241,6 +215,7 @@ X_test = sc_ann.transform(X_test)
 
 history = regressor.fit(X_train, y_train, epochs = 20, batch_size = 32, validation_data=(X_test, y_test))
 
+plt.figure(figsize=(15,7))
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
 plt.title('model loss')
@@ -253,3 +228,12 @@ y_pred = regressor.predict(X_test)
 error = metrics.mean_squared_error(sc.inverse_transform(y_test), sc.inverse_transform(y_pred), squared=False)
 print('Root Mean Squared Error: ',round(error,3))
 print('Mean Absolute Error: ',round(metrics.mean_absolute_error(sc.inverse_transform(y_test), sc.inverse_transform(y_pred)),3))
+
+plt.figure(figsize=(20,10))
+plt.scatter(y=sc.inverse_transform(y_test),x=range(len(sc.inverse_transform(y_test))),label='Actual')
+plt.scatter(y=sc.inverse_transform(y_pred),x=range(len(sc.inverse_transform(y_test))),label='Predicted')
+plt.title('Predictions using Artificial Neural Network')
+plt.xlabel('Datapoint Number')
+plt.ylabel('Interest rate')
+plt.legend()
+plt.show()
